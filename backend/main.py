@@ -5,94 +5,66 @@ from pydantic import BaseModel
 from openai import OpenAI
 from dotenv import load_dotenv
 
-# ----------------------------
-# ENV (local only)
-# ----------------------------
+# Load environment variables
 load_dotenv()
 
-# ----------------------------
-# Validate environment
-# ----------------------------
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    raise RuntimeError("Missing OPENAI_API_KEY environment variable")
-
-# ----------------------------
 # OpenAI client
-# ----------------------------
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+app = FastAPI()
 
 # ----------------------------
-# App init
+# CORS CONFIG (PRODUCTION SAFE)
 # ----------------------------
-app = FastAPI(title="AI Agent API", version="1.0")
+origins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+    "https://*.vercel.app"
+]
 
-# ----------------------------
-# CORS (frontend access)
-# ----------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        # Add your exact Vercel domain here:
-        "https://ai-agent.vercel.app",
-    ],
-    allow_credentials=True,
+    allow_origins=origins,
+    allow_credentials=False,  # IMPORTANT: must be False when using wildcard patterns
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ----------------------------
-# Models
+# HEALTH CHECK
+# ----------------------------
+@app.get("/")
+def root():
+    return {"status": "ok", "service": "ai-agent"}
+
+# ----------------------------
+# REQUEST MODEL
 # ----------------------------
 class ChatRequest(BaseModel):
     message: str
 
-
-class ChatResponse(BaseModel):
-    reply: str | None = None
-    error: str | None = None
-
 # ----------------------------
-# Health endpoint
+# CHAT ENDPOINT
 # ----------------------------
-@app.get("/")
-def health():
-    return {
-        "status": "ok",
-        "service": "ai-agent",
-    }
-
-# ----------------------------
-# Chat endpoint
-# ----------------------------
-@app.post("/chat", response_model=ChatResponse)
+@app.post("/chat")
 async def chat(req: ChatRequest):
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a helpful assistant inside a CV-aware AI system. "
-                        "Be concise, accurate, and structured."
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": req.message,
-                },
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": req.message}
             ],
-            temperature=0.6,
+            temperature=0.7
         )
 
-        return ChatResponse(
-            reply=response.choices[0].message.content
-        )
+        return {
+            "reply": response.choices[0].message.content
+        }
 
     except Exception as e:
-        return ChatResponse(
-            error=str(e)
-        )
+        return {
+            "error": str(e)
+        }
