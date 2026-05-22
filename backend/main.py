@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import OpenAI
@@ -29,64 +29,81 @@ app.add_middleware(
 )
 
 # ----------------------------
-# GLOBAL MEMORY (CV TEXT)
+# GLOBAL DOCUMENT MEMORY
 # ----------------------------
-cv_text = ""
+document_text = ""
 
 # ----------------------------
-# Health
+# HEALTH
 # ----------------------------
 @app.get("/")
 def root():
     return {"status": "ok"}
 
 # ----------------------------
-# Upload PDF
+# UPLOAD PDF (GENERIC)
 # ----------------------------
-@app.post("/upload-cv")
-async def upload_cv(file: UploadFile = File(...)):
-    global cv_text
+@app.post("/upload")
+async def upload_pdf(file: UploadFile = File(...)):
+    global document_text
 
-    pdf_bytes = await file.read()
-    reader = PyPDF2.PdfReader(io.BytesIO(pdf_bytes))
+    try:
+        pdf_bytes = await file.read()
+        reader = PyPDF2.PdfReader(io.BytesIO(pdf_bytes))
 
-    text = ""
-    for page in reader.pages:
-        text += page.extract_text() or ""
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text() or ""
 
-    cv_text = text
+        document_text = text
 
-    return {
-        "status": "CV uploaded",
-        "length": len(cv_text)
-    }
+        return {
+            "status": "document uploaded",
+            "chars": len(document_text)
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ----------------------------
-# Chat
+# CHAT
 # ----------------------------
 class ChatRequest(BaseModel):
-    message: str
+    question: str
 
-@app.post("/chat")
+class ChatResponse(BaseModel):
+    question: str
+    answer: str
+
+@app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest):
     try:
-        context = cv_text if cv_text else "No CV uploaded."
+        context = document_text if document_text else "No document uploaded."
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {
                     "role": "system",
-                    "content": f"You are an assistant that answers based on this CV:\n\n{context}"
+                    "content": (
+                        "You are a helpful assistant. "
+                        "Answer only based on the provided document context. "
+                        "If the answer is not in the document, say you cannot find it."
+                        "\n\nDOCUMENT:\n" + context
+                    )
                 },
-                {"role": "user", "content": req.message}
+                {
+                    "role": "user",
+                    "content": req.question
+                }
             ],
-            temperature=0.7
+            temperature=0.3
         )
 
-        return {
-            "reply": response.choices[0].message.content
-        }
+        return ChatResponse(
+            question=req.question,
+            answer=response.choices[0].message.content
+        )
 
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
