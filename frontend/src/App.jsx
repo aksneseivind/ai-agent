@@ -1,14 +1,18 @@
 import { useState } from "react";
 
-const API = import.meta.env.VITE_API_URL;
+const API =
+  import.meta.env.VITE_API_URL ||
+  "https://ai-agent-lvvc.onrender.com";
 
 export default function App() {
-  const [apiKey, setApiKey] = useState("");
   const [file, setFile] = useState(null);
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // ----------------------------
+  // UPLOAD PDF
+  // ----------------------------
   const uploadPDF = async () => {
     if (!file) return;
 
@@ -18,19 +22,19 @@ export default function App() {
     try {
       await fetch(`${API}/upload`, {
         method: "POST",
-        headers: {
-          "x-api-key": apiKey,
-        },
         body: formData,
       });
 
       alert("PDF uploaded ✔");
     } catch (err) {
-      console.error("Upload error:", err);
       alert("Upload failed");
+      console.error(err);
     }
   };
 
+  // ----------------------------
+  // CHAT
+  // ----------------------------
   const askQuestion = async () => {
     if (!question) return;
 
@@ -44,7 +48,6 @@ export default function App() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": apiKey,
         },
         body: JSON.stringify({ question }),
       });
@@ -58,11 +61,12 @@ export default function App() {
 
       setMessages((p) => [...p, botMsg]);
     } catch (err) {
-      console.error("Chat error:", err);
-
       setMessages((p) => [
         ...p,
-        { role: "bot", text: "Error contacting server" },
+        {
+          role: "bot",
+          text: "Error contacting server",
+        },
       ]);
     }
 
@@ -70,22 +74,15 @@ export default function App() {
     setQuestion("");
   };
 
+  // ----------------------------
+  // UI
+  // ----------------------------
   return (
     <div style={styles.bg}>
       <div style={styles.shell}>
         {/* SIDEBAR */}
         <div style={styles.sidebar}>
-          <div style={styles.logo}>AI Docs</div>
-
-          <div style={styles.card}>
-            <div style={styles.label}>API Key</div>
-            <input
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-..."
-              style={styles.input}
-            />
-          </div>
+          <div style={styles.logo}>AI Agent</div>
 
           <div style={styles.card}>
             <div style={styles.label}>Upload document</div>
@@ -99,7 +96,7 @@ export default function App() {
           </div>
 
           <div style={styles.hint}>
-            AI reads your PDFs instantly
+            Ask questions about your document
           </div>
         </div>
 
@@ -112,7 +109,7 @@ export default function App() {
           <div style={styles.chat}>
             {messages.length === 0 && (
               <div style={styles.empty}>
-                Ask anything about your document
+                Upload a document and start asking questions
               </div>
             )}
 
@@ -126,7 +123,7 @@ export default function App() {
                   background:
                     m.role === "user"
                       ? "linear-gradient(135deg,#3b82f6,#2563eb)"
-                      : "rgba(255,255,255,0.8)",
+                      : "rgba(255,255,255,0.9)",
                   color:
                     m.role === "user" ? "white" : "#111827",
                 }}
@@ -136,9 +133,7 @@ export default function App() {
             ))}
 
             {loading && (
-              <div style={styles.typing}>
-                AI is thinking…
-              </div>
+              <div style={styles.typing}>AI is thinking…</div>
             )}
           </div>
 
@@ -160,6 +155,9 @@ export default function App() {
   );
 }
 
+// ----------------------------
+// STYLES (RESTORED UI)
+// ----------------------------
 const styles = {
   bg: {
     height: "100vh",
@@ -205,13 +203,6 @@ const styles = {
     fontSize: 12,
     color: "#6b7280",
     marginBottom: 6,
-  },
-
-  input: {
-    width: "100%",
-    padding: 10,
-    borderRadius: 10,
-    border: "1px solid #e5e7eb",
   },
 
   button: {
@@ -278,7 +269,6 @@ const styles = {
     padding: 14,
     borderTop: "1px solid #e5e7eb",
     background: "rgba(255,255,255,0.8)",
-    backdropFilter: "blur(10px)",
   },
 
   chatInput: {
