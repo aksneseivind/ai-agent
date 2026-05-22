@@ -29,7 +29,7 @@ app.add_middleware(
 )
 
 # ----------------------------
-# GLOBAL DOCUMENT MEMORY
+# MEMORY
 # ----------------------------
 document_text = ""
 
@@ -41,7 +41,7 @@ def root():
     return {"status": "ok"}
 
 # ----------------------------
-# UPLOAD PDF (GENERIC)
+# UPLOAD DOCUMENT
 # ----------------------------
 @app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
@@ -66,13 +66,14 @@ async def upload_pdf(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 # ----------------------------
-# CHAT
+# CHAT (FIXED CONTRACT)
 # ----------------------------
+
 class ChatRequest(BaseModel):
-    question: str
+    message: str   # ✅ FIX: was question
 
 class ChatResponse(BaseModel):
-    question: str
+    message: str
     answer: str
 
 @app.post("/chat", response_model=ChatResponse)
@@ -86,22 +87,22 @@ async def chat(req: ChatRequest):
                 {
                     "role": "system",
                     "content": (
-                        "You are a helpful assistant. "
-                        "Answer only based on the provided document context. "
-                        "If the answer is not in the document, say you cannot find it."
-                        "\n\nDOCUMENT:\n" + context
+                        "You are a helpful assistant that can answer questions about uploaded documents. "
+                        "Use the document as primary context when available. "
+                        "If the answer is not in the document, say so clearly.\n\n"
+                        f"DOCUMENT:\n{context}"
                     )
                 },
                 {
                     "role": "user",
-                    "content": req.question
+                    "content": req.message   # ✅ FIX
                 }
             ],
             temperature=0.3
         )
 
         return ChatResponse(
-            question=req.question,
+            message=req.message,
             answer=response.choices[0].message.content
         )
 

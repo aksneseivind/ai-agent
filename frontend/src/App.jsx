@@ -20,10 +20,12 @@ export default function App() {
     formData.append("file", file);
 
     try {
-      await fetch(`${API}/upload`, {
+      const res = await fetch(`${API}/upload`, {
         method: "POST",
         body: formData,
       });
+
+      if (!res.ok) throw new Error("Upload failed");
 
       alert("PDF uploaded ✔");
     } catch (err) {
@@ -49,14 +51,18 @@ export default function App() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ question }),
+
+        // 🔥 FIX: backend expects "message"
+        body: JSON.stringify({ message: question }),
       });
+
+      if (!res.ok) throw new Error("Chat request failed");
 
       const data = await res.json();
 
       const botMsg = {
         role: "bot",
-        text: data.answer || "No response",
+        text: data.answer ?? "No response",
       };
 
       setMessages((p) => [...p, botMsg]);
@@ -75,7 +81,7 @@ export default function App() {
   };
 
   // ----------------------------
-  // UI
+  // UI (UNCHANGED)
   // ----------------------------
   return (
     <div style={styles.bg}>
@@ -156,7 +162,7 @@ export default function App() {
 }
 
 // ----------------------------
-// STYLES (RESTORED UI)
+// STYLES (UNCHANGED)
 // ----------------------------
 const styles = {
   bg: {
