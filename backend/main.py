@@ -21,6 +21,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:5173",
+        "https://ai-agent-five-plum.vercel.app",
         "https://ai-agent-lvvc.vercel.app"
     ],
     allow_credentials=False,
@@ -41,7 +42,7 @@ def root():
     return {"status": "ok"}
 
 # ----------------------------
-# UPLOAD DOCUMENT
+# UPLOAD PDF
 # ----------------------------
 @app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
@@ -66,14 +67,12 @@ async def upload_pdf(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 # ----------------------------
-# CHAT (FIXED CONTRACT)
+# CHAT
 # ----------------------------
-
 class ChatRequest(BaseModel):
-    message: str   # ✅ FIX: was question
+    question: str   # ✅ FRONTEND MATCH
 
 class ChatResponse(BaseModel):
-    message: str
     answer: str
 
 @app.post("/chat", response_model=ChatResponse)
@@ -87,22 +86,21 @@ async def chat(req: ChatRequest):
                 {
                     "role": "system",
                     "content": (
-                        "You are a helpful assistant that can answer questions about uploaded documents. "
-                        "Use the document as primary context when available. "
-                        "If the answer is not in the document, say so clearly.\n\n"
+                        "You are a helpful assistant. "
+                        "Answer ONLY based on the document context. "
+                        "If not found, say you cannot find it.\n\n"
                         f"DOCUMENT:\n{context}"
                     )
                 },
                 {
                     "role": "user",
-                    "content": req.message   # ✅ FIX
+                    "content": req.question
                 }
             ],
             temperature=0.3
         )
 
         return ChatResponse(
-            message=req.message,
             answer=response.choices[0].message.content
         )
 

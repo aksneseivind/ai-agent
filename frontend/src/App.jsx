@@ -20,15 +20,19 @@ export default function App() {
     formData.append("file", file);
 
     try {
-      await fetch(`${API}/upload`, {
+      const res = await fetch(`${API}/upload`, {
         method: "POST",
         body: formData,
       });
 
+      if (!res.ok) {
+        throw new Error("Upload failed");
+      }
+
       alert("PDF uploaded ✔");
     } catch (err) {
-      alert("Upload failed");
       console.error(err);
+      alert("Upload failed");
     }
   };
 
@@ -52,21 +56,21 @@ export default function App() {
         body: JSON.stringify({ question }),
       });
 
+      if (!res.ok) {
+        throw new Error(`HTTP error ${res.status}`);
+      }
+
       const data = await res.json();
 
-      const botMsg = {
-        role: "bot",
-        text: data.answer || "No response",
-      };
-
-      setMessages((p) => [...p, botMsg]);
-    } catch (err) {
       setMessages((p) => [
         ...p,
-        {
-          role: "bot",
-          text: "Error contacting server",
-        },
+        { role: "bot", text: data.answer || "No response" },
+      ]);
+    } catch (err) {
+      console.error(err);
+      setMessages((p) => [
+        ...p,
+        { role: "bot", text: "Error contacting server" },
       ]);
     }
 
@@ -75,7 +79,7 @@ export default function App() {
   };
 
   // ----------------------------
-  // UI (RESTORED FULL DESIGN)
+  // UI (FULL RESTORED)
   // ----------------------------
   return (
     <div style={styles.bg}>
@@ -122,7 +126,8 @@ export default function App() {
                     m.role === "user"
                       ? "linear-gradient(135deg,#3b82f6,#2563eb)"
                       : "rgba(255,255,255,0.9)",
-                  color: m.role === "user" ? "white" : "#111827",
+                  color:
+                    m.role === "user" ? "white" : "#111827",
                 }}
               >
                 {m.text}
@@ -152,7 +157,7 @@ export default function App() {
 }
 
 // ----------------------------
-// STYLES (UNCHANGED UI)
+// STYLES
 // ----------------------------
 const styles = {
   bg: {
@@ -195,7 +200,6 @@ const styles = {
     border: "none",
     background: "#111827",
     color: "white",
-    cursor: "pointer",
   },
   hint: { marginTop: 20, fontSize: 12, color: "#9ca3af" },
   main: { flex: 1, display: "flex", flexDirection: "column" },
@@ -203,7 +207,6 @@ const styles = {
     padding: 16,
     fontWeight: 600,
     borderBottom: "1px solid #e5e7eb",
-    background: "rgba(255,255,255,0.8)",
   },
   chat: {
     flex: 1,
@@ -211,23 +214,15 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     gap: 12,
-    overflowY: "auto",
   },
   msg: {
     padding: 14,
     borderRadius: 16,
     maxWidth: "65%",
-    fontSize: 14,
-    boxShadow: "0 6px 20px rgba(0,0,0,0.05)",
   },
   empty: { marginTop: 40, textAlign: "center", color: "#9ca3af" },
   typing: { fontSize: 12, color: "#6b7280" },
-  inputBar: {
-    display: "flex",
-    padding: 14,
-    borderTop: "1px solid #e5e7eb",
-    background: "rgba(255,255,255,0.8)",
-  },
+  inputBar: { display: "flex", padding: 14 },
   chatInput: {
     flex: 1,
     padding: 12,
@@ -238,9 +233,8 @@ const styles = {
     marginLeft: 10,
     padding: "12px 18px",
     borderRadius: 12,
-    border: "none",
     background: "linear-gradient(135deg,#3b82f6,#2563eb)",
     color: "white",
-    cursor: "pointer",
+    border: "none",
   },
 };
