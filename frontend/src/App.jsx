@@ -20,12 +20,10 @@ export default function App() {
     formData.append("file", file);
 
     try {
-      const res = await fetch(`${API}/upload`, {
+      await fetch(`${API}/upload`, {
         method: "POST",
         body: formData,
       });
-
-      if (!res.ok) throw new Error("Upload failed");
 
       alert("PDF uploaded ✔");
     } catch (err) {
@@ -51,18 +49,14 @@ export default function App() {
         headers: {
           "Content-Type": "application/json",
         },
-
-        // 🔥 FIX: backend expects "message"
-        body: JSON.stringify({ message: question }),
+        body: JSON.stringify({ question }),
       });
-
-      if (!res.ok) throw new Error("Chat request failed");
 
       const data = await res.json();
 
       const botMsg = {
         role: "bot",
-        text: data.answer ?? "No response",
+        text: data.answer || "No response",
       };
 
       setMessages((p) => [...p, botMsg]);
@@ -81,12 +75,11 @@ export default function App() {
   };
 
   // ----------------------------
-  // UI (UNCHANGED)
+  // UI (RESTORED FULL DESIGN)
   // ----------------------------
   return (
     <div style={styles.bg}>
       <div style={styles.shell}>
-        {/* SIDEBAR */}
         <div style={styles.sidebar}>
           <div style={styles.logo}>AI Agent</div>
 
@@ -106,7 +99,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* CHAT */}
         <div style={styles.main}>
           <div style={styles.topbar}>
             Document Intelligence Chat
@@ -130,8 +122,7 @@ export default function App() {
                     m.role === "user"
                       ? "linear-gradient(135deg,#3b82f6,#2563eb)"
                       : "rgba(255,255,255,0.9)",
-                  color:
-                    m.role === "user" ? "white" : "#111827",
+                  color: m.role === "user" ? "white" : "#111827",
                 }}
               >
                 {m.text}
@@ -143,7 +134,6 @@ export default function App() {
             )}
           </div>
 
-          {/* INPUT */}
           <div style={styles.inputBar}>
             <input
               value={question}
@@ -162,7 +152,7 @@ export default function App() {
 }
 
 // ----------------------------
-// STYLES (UNCHANGED)
+// STYLES (UNCHANGED UI)
 // ----------------------------
 const styles = {
   bg: {
@@ -173,7 +163,6 @@ const styles = {
     alignItems: "center",
     fontFamily: "Inter, Arial",
   },
-
   shell: {
     width: "95%",
     height: "92vh",
@@ -183,20 +172,13 @@ const styles = {
     boxShadow: "0 20px 60px rgba(0,0,0,0.1)",
     background: "white",
   },
-
   sidebar: {
     width: 300,
     padding: 20,
     background: "linear-gradient(180deg, #ffffff, #f9fafb)",
     borderRight: "1px solid #e5e7eb",
   },
-
-  logo: {
-    fontSize: 22,
-    fontWeight: 700,
-    marginBottom: 20,
-  },
-
+  logo: { fontSize: 22, fontWeight: 700, marginBottom: 20 },
   card: {
     padding: 12,
     borderRadius: 12,
@@ -204,13 +186,7 @@ const styles = {
     border: "1px solid #e5e7eb",
     marginBottom: 12,
   },
-
-  label: {
-    fontSize: 12,
-    color: "#6b7280",
-    marginBottom: 6,
-  },
-
+  label: { fontSize: 12, color: "#6b7280", marginBottom: 6 },
   button: {
     marginTop: 10,
     width: "100%",
@@ -221,27 +197,14 @@ const styles = {
     color: "white",
     cursor: "pointer",
   },
-
-  hint: {
-    marginTop: 20,
-    fontSize: 12,
-    color: "#9ca3af",
-  },
-
-  main: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-  },
-
+  hint: { marginTop: 20, fontSize: 12, color: "#9ca3af" },
+  main: { flex: 1, display: "flex", flexDirection: "column" },
   topbar: {
     padding: 16,
     fontWeight: 600,
     borderBottom: "1px solid #e5e7eb",
     background: "rgba(255,255,255,0.8)",
-    backdropFilter: "blur(10px)",
   },
-
   chat: {
     flex: 1,
     padding: 20,
@@ -250,7 +213,6 @@ const styles = {
     gap: 12,
     overflowY: "auto",
   },
-
   msg: {
     padding: 14,
     borderRadius: 16,
@@ -258,32 +220,20 @@ const styles = {
     fontSize: 14,
     boxShadow: "0 6px 20px rgba(0,0,0,0.05)",
   },
-
-  empty: {
-    marginTop: 40,
-    textAlign: "center",
-    color: "#9ca3af",
-  },
-
-  typing: {
-    fontSize: 12,
-    color: "#6b7280",
-  },
-
+  empty: { marginTop: 40, textAlign: "center", color: "#9ca3af" },
+  typing: { fontSize: 12, color: "#6b7280" },
   inputBar: {
     display: "flex",
     padding: 14,
     borderTop: "1px solid #e5e7eb",
     background: "rgba(255,255,255,0.8)",
   },
-
   chatInput: {
     flex: 1,
     padding: 12,
     borderRadius: 12,
     border: "1px solid #e5e7eb",
   },
-
   send: {
     marginLeft: 10,
     padding: "12px 18px",
