@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const API =
   import.meta.env.VITE_API_URL ||
@@ -9,6 +9,28 @@ export default function App() {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // NEW: documents state
+  const [documents, setDocuments] = useState([]);
+
+  // ----------------------------
+  // FETCH DOCUMENTS (NEW)
+  // ----------------------------
+  const fetchDocuments = async () => {
+    try {
+      const res = await fetch(`${API}/documents`);
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setDocuments(data.documents || []);
+    } catch (err) {
+      console.error("Failed to fetch documents", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
 
   // ----------------------------
   // UPLOAD PDF
@@ -28,6 +50,11 @@ export default function App() {
       if (!res.ok) {
         throw new Error("Upload failed");
       }
+
+      setFile(null);
+
+      // NEW: refresh document list after upload
+      await fetchDocuments();
 
       alert("PDF uploaded ✔");
     } catch (err) {
@@ -79,7 +106,22 @@ export default function App() {
   };
 
   // ----------------------------
-  // UI (FULL RESTORED)
+  // NEW: example questions
+  // ----------------------------
+  const exampleQuestions = [
+    "Oppsummer dokumentet",
+    "Hva er de viktigste reglene?",
+    "Finn støy-reglene",
+    "Hva sier dokumentet om fellesarealer?",
+  ];
+
+  const askExample = (q) => {
+    setQuestion(q);
+    setTimeout(() => askQuestion(q), 50);
+  };
+
+  // ----------------------------
+  // UI
   // ----------------------------
   return (
     <div style={styles.bg}>
@@ -87,6 +129,7 @@ export default function App() {
         <div style={styles.sidebar}>
           <div style={styles.logo}>AI Agent</div>
 
+          {/* UPLOAD */}
           <div style={styles.card}>
             <div style={styles.label}>Upload document</div>
             <input
@@ -96,6 +139,48 @@ export default function App() {
             <button onClick={uploadPDF} style={styles.button}>
               Upload PDF
             </button>
+          </div>
+
+          {/* NEW: DOCUMENT LIST */}
+          <div style={styles.card}>
+            <div style={styles.label}>Documents</div>
+
+            {documents.length === 0 && (
+              <div style={{ fontSize: 12, color: "#9ca3af" }}>
+                No documents uploaded yet
+              </div>
+            )}
+
+            {documents.map((doc, i) => (
+              <div key={i} style={{ fontSize: 12, marginTop: 4 }}>
+                📄 {doc}
+              </div>
+            ))}
+          </div>
+
+          {/* NEW: EXAMPLE QUESTIONS */}
+          <div style={styles.card}>
+            <div style={styles.label}>Example questions</div>
+
+            {exampleQuestions.map((q, i) => (
+              <button
+                key={i}
+                onClick={() => askExample(q)}
+                style={{
+                  marginTop: 6,
+                  width: "100%",
+                  fontSize: 12,
+                  padding: 8,
+                  borderRadius: 8,
+                  border: "1px solid #e5e7eb",
+                  background: "#f9fafb",
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                {q}
+              </button>
+            ))}
           </div>
 
           <div style={styles.hint}>
@@ -157,7 +242,7 @@ export default function App() {
 }
 
 // ----------------------------
-// STYLES
+// STYLES (UNCHANGED)
 // ----------------------------
 const styles = {
   bg: {
