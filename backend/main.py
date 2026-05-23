@@ -33,7 +33,6 @@ app.add_middleware(
 # MEMORY (MULTI DOCUMENT)
 # ----------------------------
 documents = {}
-active_document = None
 
 # ----------------------------
 # HEALTH
@@ -48,7 +47,6 @@ def root():
 @app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
     global documents
-    global active_document
 
     try:
         pdf_bytes = await file.read()
@@ -59,14 +57,12 @@ async def upload_pdf(file: UploadFile = File(...)):
             text += page.extract_text() or ""
 
         documents[file.filename] = text
-        active_document = file.filename
 
         return {
             "status": "document uploaded",
             "filename": file.filename,
             "chars": len(text),
-            "documents": list(documents.keys()),
-            "active_document": active_document
+            "documents": list(documents.keys())
         }
 
     except Exception as e:
@@ -84,10 +80,14 @@ class ChatResponse(BaseModel):
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest):
     try:
-        if not active_document:
-            context = "No document uploaded."
+        # Build full context from ALL documents
+        if not documents:
+            context = "No documents uploaded."
         else:
-            context = documents.get(active_document, "")
+            context = "\n\n".join(
+                f"DOCUMENT: {name}\n{text}"
+                for name, text in documents.items()
+            )
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -97,8 +97,8 @@ async def chat(req: ChatRequest):
                     "content": (
                         "You are a helpful assistant. "
                         "Answer ONLY based on the document context. "
-                        "If not found, say you cannot find it.\n\n"
-                        f"DOCUMENT:\n{context}"
+                        "If the answer is not found, say you cannot find it.\n\n"
+                        f"DOCUMENTS:\n{context}"
                     )
                 },
                 {
@@ -122,6 +122,5 @@ async def chat(req: ChatRequest):
 @app.get("/documents")
 async def get_documents():
     return {
-        "documents": list(documents.keys()),
-        "active_document": active_document
+        "documents": list(documents.keys())
     }
