@@ -30,9 +30,10 @@ app.add_middleware(
 )
 
 # ----------------------------
-# MEMORY
+# MEMORY (MULTI DOCUMENT)
 # ----------------------------
-document_text = ""
+documents = {}
+active_document = None
 
 # ----------------------------
 # HEALTH
@@ -46,7 +47,8 @@ def root():
 # ----------------------------
 @app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
-    global document_text
+    global documents
+    global active_document
 
     try:
         pdf_bytes = await file.read()
@@ -56,11 +58,15 @@ async def upload_pdf(file: UploadFile = File(...)):
         for page in reader.pages:
             text += page.extract_text() or ""
 
-        document_text = text
+        documents[file.filename] = text
+        active_document = file.filename
 
         return {
             "status": "document uploaded",
-            "chars": len(document_text)
+            "filename": file.filename,
+            "chars": len(text),
+            "documents": list(documents.keys()),
+            "active_document": active_document
         }
 
     except Exception as e:
@@ -70,7 +76,7 @@ async def upload_pdf(file: UploadFile = File(...)):
 # CHAT
 # ----------------------------
 class ChatRequest(BaseModel):
-    question: str   # ✅ FRONTEND MATCH
+    question: str
 
 class ChatResponse(BaseModel):
     answer: str
@@ -78,7 +84,10 @@ class ChatResponse(BaseModel):
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest):
     try:
-        context = document_text if document_text else "No document uploaded."
+        if not active_document:
+            context = "No document uploaded."
+        else:
+            context = documents.get(active_document, "")
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -106,3 +115,13 @@ async def chat(req: ChatRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# ----------------------------
+# DOCUMENT LIST
+# ----------------------------
+@app.get("/documents")
+async def get_documents():
+    return {
+        "documents": list(documents.keys()),
+        "active_document": active_document
+    }
